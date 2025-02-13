@@ -27,11 +27,11 @@ const allowedExtensions = [
 function App() {
   const tableRef = useRef();
   const tableBodyRef = useRef();
-  const [isJsonAvailable, setIsJsonAvailable] = useState(false)
-  let questionContentJson = {}
+  const [isJsonAvailable, setIsJsonAvailable] = useState(false);
+  const [questionContentJson, setQuestionContentJson] = useState({})
+  const [zipBuffer, setZipBuffer] = useState(null);
 
   let fileContentMap = {};
-  let zipBuffer
 
   const _filterFilesToBeIgnored = (files) => {
     return files.filter((file) => {
@@ -154,29 +154,40 @@ function App() {
     // Populate the table with the filtered files
     _populateTable(filteredFiles);
 
-    questionContentJson = await _convertFilesToJson(filteredFiles);
+    const questionJson = await _convertFilesToJson(filteredFiles);
+    setQuestionContentJson(questionJson)
 
-    zipBuffer = await _transformToZip(questionContentJson);
+    const zip = await _transformToZip(questionJson);
+    setZipBuffer(zip)
 
-    setIsJsonAvailable(true)
+    setIsJsonAvailable(true);
 
     // Show the table after populating
     table.style.display = filteredFiles.length > 0 ? "table" : "none";
   };
 
   const handleJsonDownload = () => {
-    const link = document.createElement("a")
-    link.href = URL.createObjectURL(questionContentJson)
-    link.click()
-    URL.revokeObjectURL(questionContentJson)
-  }
+    const jsonString = JSON.stringify(questionContentJson, null, 2);
+    const blob = new Blob([jsonString], { type: "application/json" });
+
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "stackblitz-project.json";
+    link.click();
+
+    URL.revokeObjectURL(link.href);
+  };
 
   const handleZipDownload = () => {
+    const blob = new Blob([zipBuffer], { type: "application/zip" });
+
     const link = document.createElement("a");
-    link.href = URL.createObjectURL(zipBuffer);
+    link.href = URL.createObjectURL(blob);
+    link.download = "stackblitz-project.zip";
     link.click();
-    URL.revokeObjectURL(zipBuffer);
-  }
+
+    URL.revokeObjectURL(link.href);
+  };
 
   return (
     <div
@@ -206,14 +217,19 @@ function App() {
         You can select any directory with multiple files or multiple child
         directories in it.
       </p>
-      {
-        isJsonAvailable && (
-          <>
-            <button onclick={handleJsonDownload}>Download as JSON</button>
-            <button onclick={handleZipDownload}>Download as Zip</button>
-          </>
-        )
-      }
+      {isJsonAvailable && (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "1rem",
+            marginBottom: "1rem",
+          }}
+        >
+          <button onClick={handleJsonDownload}>Download as JSON</button>
+          <button onClick={handleZipDownload}>Download as Zip</button>
+        </div>
+      )}
       <table
         id="fileTable"
         style={{
