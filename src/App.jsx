@@ -27,6 +27,8 @@ const allowedExtensions = [
 function App() {
   const tableRef = useRef();
   const tableBodyRef = useRef();
+  const [isJsonAvailable, setIsJsonAvailable] = useState(false)
+  let questionContentJson = {}
 
   let fileContentMap = {};
   let zipBuffer
@@ -144,28 +146,37 @@ function App() {
   const handleFolderUpload = async (e) => {
     const table = tableRef.current;
     const tableBody = tableBodyRef.current;
-
-    const files = Array.from(e.target.files);
-
     tableBody.innerHTML = "";
 
+    const files = Array.from(e.target.files);
     const filteredFiles = _filterFilesToBeIgnored(files);
 
     // Populate the table with the filtered files
     _populateTable(filteredFiles);
 
-    const questionContentJson = await _convertFilesToJson(filteredFiles);
+    questionContentJson = await _convertFilesToJson(filteredFiles);
 
     zipBuffer = await _transformToZip(questionContentJson);
 
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(zipBuffer);
-    link.click();
-    URL.revokeObjectURL(zipBuffer);
+    setIsJsonAvailable(true)
 
     // Show the table after populating
     table.style.display = filteredFiles.length > 0 ? "table" : "none";
   };
+
+  const handleJsonDownload = () => {
+    const link = document.createElement("a")
+    link.href = URL.createObjectURL(questionContentJson)
+    link.click()
+    URL.revokeObjectURL(questionContentJson)
+  }
+
+  const handleZipDownload = () => {
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(zipBuffer);
+    link.click();
+    URL.revokeObjectURL(zipBuffer);
+  }
 
   return (
     <div
@@ -195,6 +206,14 @@ function App() {
         You can select any directory with multiple files or multiple child
         directories in it.
       </p>
+      {
+        isJsonAvailable && (
+          <>
+            <button onclick={handleJsonDownload}>Download as JSON</button>
+            <button onclick={handleZipDownload}>Download as Zip</button>
+          </>
+        )
+      }
       <table
         id="fileTable"
         style={{
